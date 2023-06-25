@@ -1,0 +1,46 @@
+version: "3.9"
+services:
+  # trino:
+  #   ports:
+  #     - "8080:8080"
+  #   image: "trinodb/trino:414"
+  #   volumes:
+  #     - ./docker/trino/etc:/usr/lib/trino/etc:ro
+  #     - ./docker/trino/catalog:/etc/trino/catalog
+
+  mongo:
+    image: mongo
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+
+  mongo-express:
+    image: mongo-express
+    restart: always
+    ports:
+      - 8081:8081
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: root
+      ME_CONFIG_MONGODB_ADMINPASSWORD: example
+      ME_CONFIG_MONGODB_URL: mongodb://root:example@mongo:27017/
+
+  fastapi:
+    build: .
+    # image: hackingweek-fastapi:v1
+    ports:
+      - "8767:80"
+    volumes:
+      - ./app:/app
+    depends_on:
+      - mongo
+
+  jupyterlab:
+    image: jupyter/minimal-notebook:lab-4.0.2
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./data:/home/jovyan/data
+    depends_on:
+      - mongo
+    entrypoint: sh -c 'jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --notebook-dir=/home/jovyan/data --allow-root'
