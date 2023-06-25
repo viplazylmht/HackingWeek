@@ -26,3 +26,4 @@ services:
       - ./app:/app
     depends_on:
       - mongo
+    entrypoint: /start-reload.sh

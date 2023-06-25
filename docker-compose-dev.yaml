@@ -34,6 +34,7 @@ services:
       - ./app:/app
     depends_on:
       - mongo
+    entrypoint: /start-reload.sh
 
   jupyterlab:
     image: jupyter/minimal-notebook:lab-4.0.2
