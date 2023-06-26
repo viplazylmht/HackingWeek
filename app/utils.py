@@ -22,7 +22,7 @@ from functools import partial
 from pydantic import BaseModel, Field
 
 class DeviceOS(BaseModel):
-    _id: str = Field(description="device os")
+    id: str = Field(description="device os", alias="_id")
     sessions: int = Field(description="number of sessions")
     dist_users: int = Field(description="number of distinct users")
 
