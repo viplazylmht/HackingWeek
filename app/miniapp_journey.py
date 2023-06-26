@@ -74,7 +74,7 @@ def get_first_nodes(ds: date, granularity: Optional[Granularity], device_os: Opt
 
 def get_path_tree(start_date: date, granularity: Granularity,  node_name: Union[str, None] = None, depth: Union[int, None] = 0, device_os: Union[str, None] = None):
 
-    root_node = build_root_node(start_date, granularity, node_name, device_os)
+    root_node = build_root_node(start_date, granularity, None, device_os) # root node do not have node_name, pass None instead
     date_time = datetime(year=start_date.year, month=start_date.month, day=start_date.day,)
 
     # TODO: retrieve paths from cache
