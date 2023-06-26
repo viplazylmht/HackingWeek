@@ -5,8 +5,8 @@ from fastapi import FastAPI, Response, Path, Query
 from openapi_tags import tags_metadata
 from datetime import date
 
-from utils import Granularity, TopPath, Message
-from miniapp_journey import get_top_journeys_from_node
+from utils import Granularity, TopPath, Message, FirstNode
+from miniapp_journey import get_top_journeys_from_node, get_first_nodes
 import json
 
 app = FastAPI(openapi_tags=tags_metadata)
@@ -23,7 +23,21 @@ def ping_pong():
 def read_item(item_id: int, q: Union[str, None] = None):
     return {"item_id": item_id, "q": q}
 
-@app.get("/journeys/top_path/{ds}/{granularity}", tags=["miniapp journey"], response_model=List[TopPath],
+@app.get("/journeys/first_nodes/{ds}/{granularity}", tags=["miniapp journey table"],  response_model=List[FirstNode],
+    responses={
+        200: {
+            "description": "First nodes retrieved successfully with any order.",
+            "content": {
+                "application/json": {
+                    "example": [{"node_name":"First miniapp"},{"node_name":"Zero miniapp"}]
+                }
+            }
+        }
+    })
+def first_nodes(ds: date, granularity: Granularity, device_os: Union[str, None] = None):
+    return get_first_nodes(ds, granularity, device_os)
+
+@app.get("/journeys/top_paths/{ds}/{granularity}", tags=["miniapp journey table"], response_model=List[TopPath],
     responses={
         404: {"model": Message, "description": "The item was not found"},
         200: {
@@ -35,7 +49,7 @@ def read_item(item_id: int, q: Union[str, None] = None):
             },
         },
 })
-def top_path(ds: date, granularity: Granularity,  start_node: Union[str, None] = None, device_os: Union[str, None] = None):
+def top_paths(ds: date, granularity: Granularity,  start_node: Union[str, None] = None, device_os: Union[str, None] = None):
     # return {"ds": ds, "granularity": granularity, "start_node": start_node, "device_os": device_os}
 
     result = get_top_journeys_from_node(ds, granularity, start_node, device_os)

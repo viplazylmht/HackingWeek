@@ -39,6 +39,9 @@ class TopPath(BaseModel):
 class Message(BaseModel):
     message: str = Field(description="message of the response")
 
+class FirstNode(BaseModel):
+    node_name: str = Field(description="name of the first node")
+
 URI = 'mongodb://root:example@mongo:27017/'
 
 client = MongoClient(URI)

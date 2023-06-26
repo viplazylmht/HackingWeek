@@ -1,7 +1,11 @@
 tags_metadata = [
     {
-        "name": "miniapp journey",
-        "description": "Operations with miniapp journeys.",
+        "name": "miniapp journey table",
+        "description": "Operations with miniapp journeys in table form.",
+    },
+    {
+        "name": "miniapp journey tree",
+        "description": "Operations with miniapp journeys in tree form.",
     },
     {
         "name": "ping",

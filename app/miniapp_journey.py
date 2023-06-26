@@ -40,3 +40,29 @@ def get_top_journeys_from_node(start_date: date, granularity: Optional[Granulari
         result.append(path_stats)
 
     return result
+
+def get_first_nodes(ds: date, granularity: Optional[Granularity], device_os: Optional[str] = None):
+
+    root_filter = {}
+    date_time = datetime(year=ds.year, month=ds.month, day=ds.day,)
+
+    if granularity == Granularity.DAILY:
+        root_filter["journey_date"] = {"$gte": date_time, "$lt": date_time + timedelta(days=int(Granularity.DAILY.value))}
+    elif granularity == Granularity.WEEKLY:
+        root_filter["journey_date"] = {"$gte": date_time, "$lt": date_time + timedelta(days=int(Granularity.WEEKLY.value))}
+
+    if device_os:
+        root_filter['device_os'] = {'$in': device_os.split(',')}
+
+    root_node = {"filter": root_filter, "projection": { "_id": 0, "path.entity_name": 1}}
+
+    cursor = miniapp_collection.find(**root_node)
+
+    result = []
+
+    for path in cursor:
+        if path['path']['entity_name'] not in result:
+            result.append(path['path']['entity_name'])
+
+    return [{"node_name": node_name} for node_name in result]
+
