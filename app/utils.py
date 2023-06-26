@@ -42,6 +42,11 @@ class Message(BaseModel):
 class FirstNode(BaseModel):
     node_name: str = Field(description="name of the first node")
 
+class PathTree(BaseModel):
+    name: str = Field(description="name of the node unless this is the root of the tree")
+    stats: Stats = Field(description="statistics of the node in the tree")
+    children: Optional[Dict[str, "PathTree"]] = Field(description="children of the path. Each child is a keypair of the name of the child and the child itself")
+
 URI = 'mongodb://root:example@mongo:27017/'
 
 client = MongoClient(URI)
@@ -232,24 +237,27 @@ def retrieve_journey_statistics(collection: Collection, start_date: datetime, gr
 
     return { "path": path, "stats": comparing_stat(cur_statistic, pre_statistic) }
 
-def gen_sub_paths(all_paths, anchor_node_name, tail_node_name=None):
+def gen_sub_paths(all_paths, anchor_node_name=None, tail_node_name=None):
     matcher = re.compile(f"(.*?)({anchor_node_name}(?:$|\.).*{tail_node_name or ''}).*")
 
     sub_path_to_paths = {}
     for p, f in all_paths.items():
 
-        match = matcher.match(p)
+        if anchor_node_name:
+            match = matcher.match(p)
 
-        if match:
-            [parent_path, sub_path] = match.groups()
+            if match:
+                [parent_path, sub_path] = match.groups()
 
-            parent_strip = parent_path.strip(".")
-            position = len(parent_strip.split(".")) if parent_strip else 0
+                parent_strip = parent_path.strip(".")
+                position = len(parent_strip.split(".")) if parent_strip else 0
 
-            if sub_path not in sub_path_to_paths:
-                sub_path_to_paths[sub_path] = [(p, position)]
-            else:
-                sub_path_to_paths[sub_path].append((p, position))
+                if sub_path not in sub_path_to_paths:
+                    sub_path_to_paths[sub_path] = [(p, position)]
+                else:
+                    sub_path_to_paths[sub_path].append((p, position))
+        else:
+            sub_path_to_paths[p] = [(p, 0)]
 
     return sub_path_to_paths
 
@@ -283,12 +291,28 @@ def add_node_to_tree(sub_tree: dict, path: str, starting_point):
         add_node_to_tree(sub_tree["children"][next_node], remaining_nodes, starting_point)
 
 
-def build_tree(sub_path_dict):
+def build_tree(sub_path_dict, is_root=False):
     tree = {}
 
+    if is_root:
+        tree["name"] = "root"
+        tree["starting_points"] = [-1,]
+        tree["children"] = {}
+
     for sp, fpd in sub_path_dict.items():
+
+        if is_root:
+            start_node = sp[:sp.index(".")] if "." in sp else sp
+
+            if start_node not in tree["children"]:
+                tree["children"][start_node] = {}
+
         for fp, d in fpd:
-            add_node_to_tree(tree, sp, d)
+
+            if is_root:
+                add_node_to_tree(tree["children"][start_node], sp, d)
+            else:
+                add_node_to_tree(tree, sp, d)
 
     return tree
 

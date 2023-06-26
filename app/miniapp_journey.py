@@ -6,8 +6,7 @@ import hashlib
 
 # Path: app/miniapp_journey.py
 
-def get_top_journeys_from_node(start_date: date, granularity: Optional[Granularity], start_node: Optional[str] = None, device_os: Optional[str] = None):
-
+def build_root_node(start_date: date, granularity: Optional[Granularity], start_node: Optional[str] = None, device_os: Optional[str] = None) -> Dict[str, Any]:
     root_filter = {}
     date_time = datetime(year=start_date.year, month=start_date.month, day=start_date.day,)
 
@@ -20,9 +19,16 @@ def get_top_journeys_from_node(start_date: date, granularity: Optional[Granulari
         root_filter['path.entity_name'] = start_node
 
     if device_os:
-        root_filter['device_os'] = {'$in': device_os.split(',')}
+        root_filter['device_os'] = device_os
 
     root_node = {"filter": root_filter, "projection": { "_id": 0, "path.child.entity_name" if start_node else "path.entity_name": 1}}
+
+    return root_node
+
+def get_top_journeys_from_node(start_date: date, granularity: Optional[Granularity], start_node: Optional[str] = None, device_os: Optional[str] = None):
+
+    date_time = datetime(year=start_date.year, month=start_date.month, day=start_date.day,)
+    root_node = build_root_node(start_date, granularity, start_node, device_os)
 
     # TODO: retrieve paths from cache
 
@@ -66,3 +72,22 @@ def get_first_nodes(ds: date, granularity: Optional[Granularity], device_os: Opt
 
     return [{"node_name": node_name} for node_name in result]
 
+def get_path_tree(start_date: date, granularity: Granularity,  node_name: Union[str, None] = None, depth: Union[int, None] = 0, device_os: Union[str, None] = None):
+
+    root_node = build_root_node(start_date, granularity, node_name, device_os)
+    date_time = datetime(year=start_date.year, month=start_date.month, day=start_date.day,)
+
+    # TODO: retrieve paths from cache
+
+    paths = add_tail_filter_to_paths(find_all_path_from_node(miniapp_collection, root_node))
+
+    # TODO: save paths to cache
+
+    sub_paths_dict = gen_sub_paths(paths, node_name)
+
+    tree = build_tree(sub_paths_dict, is_root=(node_name is None))
+    prepare_tree_filter(tree)
+    collect_tree_stat(miniapp_collection, date_time, granularity, tree)
+
+    result = tree
+    return result

@@ -5,23 +5,15 @@ from fastapi import FastAPI, Response, Path, Query
 from openapi_tags import tags_metadata
 from datetime import date
 
-from utils import Granularity, TopPath, Message, FirstNode
-from miniapp_journey import get_top_journeys_from_node, get_first_nodes
+from utils import Granularity, TopPath, Message, FirstNode, PathTree
+from miniapp_journey import get_top_journeys_from_node, get_first_nodes, get_path_tree
 import json
 
 app = FastAPI(openapi_tags=tags_metadata)
 
-@app.get("/")
-def read_root():
-    return {"Hello": "World"}
-
 @app.get("/ping", tags=["ping"])
 def ping_pong():
     return "pong!"
-
-@app.get("/journeys/{item_id}")
-def read_item(item_id: int, q: Union[str, None] = None):
-    return {"item_id": item_id, "q": q}
 
 @app.get("/journeys/first_nodes/{ds}/{granularity}", tags=["miniapp journey table"],  response_model=List[FirstNode],
     responses={
@@ -35,7 +27,8 @@ def read_item(item_id: int, q: Union[str, None] = None):
         }
     })
 def first_nodes(ds: date, granularity: Granularity, device_os: Union[str, None] = None):
-    return get_first_nodes(ds, granularity, device_os)
+    result = get_first_nodes(ds, granularity, device_os)
+    return Response(content=json.dumps(result), media_type="application/json")
 
 @app.get("/journeys/top_paths/{ds}/{granularity}", tags=["miniapp journey table"], response_model=List[TopPath],
     responses={
@@ -55,3 +48,18 @@ def top_paths(ds: date, granularity: Granularity,  start_node: Union[str, None] 
     result = get_top_journeys_from_node(ds, granularity, start_node, device_os)
 
     return Response(content=json.dumps(result), media_type="application/json")
+
+@app.get("/journeys/tree/{ds}/{granularity}", tags=["miniapp journey tree"], response_model=PathTree,
+    responses={
+        404: {"model": Message, "description": "The item was not found"},
+        200: {
+            "description": "Tree retrieved successfully and statistics calculated.",
+            "content": {
+                "application/json": {
+                    "example": {"name":"root","stats":{"dist_users":0,"sessions":0,"device_os":[]},"children":{"First miniapp":{"name":"First miniapp","stats":{"dist_users":0,"sessions":0,"device_os":[]},"children":{"Second miniapp":{"name":"Second miniapp","stats":{"dist_users":0,"sessions":0,"device_os":[]},"children":{"Third miniapp":{"name":"Third miniapp","stats":{"dist_users":0,"sessions":0,"device_os":[]},"children":{"Fourth miniapp":{"name":"Fourth miniapp","stats":{"dist_users":0,"sessions":0,"device_os":[]},"children":{"Five miniapp":{"name":"Five miniapp","stats":{"dist_users":0,"sessions":0,"device_os":[]},"children":{}}}}}},"Fourth miniapp":{"name":"Fourth miniapp","stats":{"dist_users":0,"sessions":0,"device_os":[]},"children":{}}}}}},"Zero miniapp":{"name":"Zero miniapp","stats":{"dist_users":0,"sessions":0,"device_os":[]},"children":{"First miniapp":{"name":"First miniapp","stats":{"dist_users":0,"sessions":0,"device_os":[]},"children":{"Third miniapp":{"name":"Third miniapp","stats":{"dist_users":0,"sessions":0,"device_os":[]},"children":{"Fourth miniapp":{"name":"Fourth miniapp","stats":{"dist_users":0,"sessions":0,"device_os":[]},"children":{}}}}}}}}}},
+                }
+            },
+    }},)
+def get_tree(ds: date, granularity: Granularity,  node_name: Union[str, None] = None, depth: Union[int, None] = 0, device_os: Union[str, None] = None):
+    return get_path_tree(ds, granularity, node_name, depth, device_os)
+
