@@ -82,6 +82,9 @@ def get_path_tree(start_date: date, granularity: Granularity,  node_name: Union[
     if depth < 0:
         return Response(status_code=status.HTTP_400_BAD_REQUEST, content="depth must be >= 0")
 
+    if node_name and depth == 0:
+        return Response(status_code=status.HTTP_400_BAD_REQUEST, content="depth must be > 0 if node_name is provided")
+
     root_node = build_root_node(start_date, granularity, None, device_os) # root node do not have node_name, pass None instead
     date_time = datetime(year=start_date.year, month=start_date.month, day=start_date.day,)
 
@@ -101,4 +104,4 @@ def get_path_tree(start_date: date, granularity: Granularity,  node_name: Union[
     collect_tree_stat(miniapp_collection, date_time, granularity, tree)
 
     result = tree
-    return result
+    return Response(content=json.dumps(result), status_code=status.HTTP_200_OK, media_type="application/json")
