@@ -237,8 +237,13 @@ def retrieve_journey_statistics(collection: Collection, start_date: datetime, gr
 
     return { "path": path, "stats": comparing_stat(cur_statistic, pre_statistic) }
 
-def gen_sub_paths(all_paths, anchor_node_name=None, tail_node_name=None):
-    matcher = re.compile(f"(.*?)({anchor_node_name}(?:$|\.).*{tail_node_name or ''}).*")
+def gen_sub_paths(all_paths, anchor_node_name=None, depth=0):
+
+    parent_pattern = ''.join(['[^.]+?\.' for i in range(depth-1)])
+    pattern = "^()([^.]+?(?:$|\.).*)" if depth < 1 else f"^({parent_pattern})({anchor_node_name}(?:$|\.).*)"
+
+    # print("DEBUG: pattern", pattern)
+    matcher = re.compile(pattern)
 
     sub_path_to_paths = {}
     for p, f in all_paths.items():
@@ -251,17 +256,18 @@ def gen_sub_paths(all_paths, anchor_node_name=None, tail_node_name=None):
 
                 parent_strip = parent_path.strip(".")
                 position = len(parent_strip.split(".")) if parent_strip else 0
+                depth = position + 1
 
                 if sub_path not in sub_path_to_paths:
-                    sub_path_to_paths[sub_path] = [(p, position)]
+                    sub_path_to_paths[sub_path] = [(p, position, depth)]
                 else:
-                    sub_path_to_paths[sub_path].append((p, position))
+                    sub_path_to_paths[sub_path].append((p, position, depth))
         else:
-            sub_path_to_paths[p] = [(p, 0)]
+            sub_path_to_paths[p] = [(p, 0, 1)]
 
     return sub_path_to_paths
 
-def add_node_to_tree(sub_tree: dict, path: str, starting_point):
+def add_node_to_tree(sub_tree: dict, path: str, starting_point: int, depth: int):
 
     extract_node, remaining_nodes = None, None
 
@@ -273,6 +279,7 @@ def add_node_to_tree(sub_tree: dict, path: str, starting_point):
         extract_node = path
 
     sub_tree["name"] = extract_node
+    sub_tree["depth"] = depth
 
     if "starting_points" in sub_tree:
         if starting_point not in sub_tree["starting_points"]:
@@ -288,7 +295,7 @@ def add_node_to_tree(sub_tree: dict, path: str, starting_point):
 
         if next_node not in sub_tree["children"]:
             sub_tree["children"][next_node] = {}
-        add_node_to_tree(sub_tree["children"][next_node], remaining_nodes, starting_point)
+        add_node_to_tree(sub_tree["children"][next_node], remaining_nodes, starting_point, depth+1)
 
 
 def build_tree(sub_path_dict, is_root=False):
@@ -298,6 +305,7 @@ def build_tree(sub_path_dict, is_root=False):
         tree["name"] = "root"
         tree["starting_points"] = [-1,]
         tree["children"] = {}
+        tree["depth"] = 0
 
     for sp, fpd in sub_path_dict.items():
 
@@ -307,12 +315,12 @@ def build_tree(sub_path_dict, is_root=False):
             if start_node not in tree["children"]:
                 tree["children"][start_node] = {}
 
-        for fp, d in fpd:
+        for fp, p, d in fpd:
 
             if is_root:
-                add_node_to_tree(tree["children"][start_node], sp, d)
+                add_node_to_tree(tree["children"][start_node], sp, p, d)
             else:
-                add_node_to_tree(tree, sp, d)
+                add_node_to_tree(tree, sp, p, d)
 
     return tree
 

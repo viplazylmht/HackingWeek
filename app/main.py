@@ -1,6 +1,7 @@
 from typing import Union, Annotated, List
 
 from fastapi import FastAPI, Response, Path, Query
+from fastapi.middleware.cors import CORSMiddleware
 
 from openapi_tags import tags_metadata
 from datetime import date
@@ -9,7 +10,25 @@ from utils import Granularity, TopPath, Message, FirstNode, PathTree
 from miniapp_journey import get_top_journeys_from_node, get_first_nodes, get_path_tree
 import json
 
+# allow cors for all origins
+
+origins = [
+    "http://13.212.173.91:8767",
+    "https://13.212.173.91:8767",
+    "http://localhost",
+    "http://localhost:8767",
+    "http://localhost:9000",
+]
+
 app = FastAPI(openapi_tags=tags_metadata)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/ping", tags=["ping"])
 def ping_pong():
@@ -51,6 +70,7 @@ def top_paths(ds: date, granularity: Granularity,  start_node: Union[str, None] 
 
 @app.get("/journeys/tree/{ds}/{granularity}", tags=["miniapp journey tree"], response_model=PathTree,
     responses={
+        400: {"model": Message, "description": "Invalid input"},
         404: {"model": Message, "description": "The item was not found"},
         200: {
             "description": "Tree retrieved successfully and statistics calculated.",
