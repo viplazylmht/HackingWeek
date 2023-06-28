@@ -53,7 +53,7 @@ URI = 'mongodb://root:example@mongo:27017/'
 client = MongoClient(URI)
 journey_db = client.journey_db
 
-miniapp_collection = journey_db.miniapp
+miniapp_collection = journey_db.miniapp2
 
 def make_miniapp_journey(agent_id, journey_id, journey_date, device_os, path=None):
     """

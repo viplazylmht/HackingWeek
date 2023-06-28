@@ -37,11 +37,14 @@ services:
     entrypoint: /start-reload.sh
 
   jupyterlab:
-    image: jupyter/minimal-notebook:lab-4.0.2
+    # image: jupyter/minimal-notebook:lab-4.0.2
+    # image: jupyter/all-spark-notebook:spark-3.3.0
+    build: ./jupyter-scala
     ports:
       - "8888:8888"
+      - "4040:4040"
     volumes:
       - ./data:/home/jovyan/data
     depends_on:
       - mongo
-    entrypoint: sh -c 'jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --notebook-dir=/home/jovyan/data --allow-root'
+    entrypoint: sh -cx 'jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --notebook-dir=/home/jovyan/data --allow-root'
