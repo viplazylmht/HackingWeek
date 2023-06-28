@@ -108,5 +108,7 @@ def get_path_tree(start_date: date, granularity: Granularity,  node_name: Union[
     prepare_tree_filter(tree)
     collect_tree_stat(miniapp_collection, date_time, granularity, tree)
 
+    transform_and_limit_tree(tree)
+
     result = tree
     return Response(content=json.dumps(result), status_code=status.HTTP_200_OK, media_type="application/json")

@@ -10,6 +10,7 @@ import re
 import json
 import os
 from typing import Union, Dict, List, Any, Optional, Tuple
+import uuid
 
 from datetime import timedelta
 from enum import Enum
@@ -46,7 +47,7 @@ class PathTree(BaseModel):
     name: str = Field(description="name of the node unless this is the root of the tree")
     depth: int = Field(description="depth of the node in the base tree")
     stats: Stats = Field(description="statistics of the node in the tree")
-    children: Optional[Dict[str, "PathTree"]] = Field(description="children of the path. Each child is a keypair of the name of the child and the child itself")
+    children: Optional[List["PathTree"]] = Field(description="children of the path. Each child is a keypair of the name of the child and the child itself")
 
 URI = 'mongodb://root:example@mongo:27017/'
 
@@ -330,24 +331,33 @@ def prepare_tree_filter(tree: dict, parents=[]):
     if ("starting_points" not in tree) or "name" not in tree:
         return
 
-    filters = []
+    if tree.get("name") == "root":
+        tree["filter"] = {}
 
-    for starting_point in tree["starting_points"]:
-        filter = {}
-        for s, parent_node in enumerate(parents, starting_point):
-            filter[gen_child_entity_name_filter(depth=s)] = parent_node
+        if "children" in tree:
+            for k in tree["children"].keys():
+                prepare_tree_filter(tree["children"][k], [])
+    else:
 
-        filter[gen_child_entity_name_filter(depth=starting_point+len(parents))] = tree["name"]
+        filters = []
 
-        filters.append(filter)
+        for starting_point in tree["starting_points"]:
+            filter = {}
+            for s, parent_node in enumerate(parents, starting_point):
+                filter[gen_child_entity_name_filter(depth=s)] = parent_node
 
-    tree["filter"] = {"$or": filters}
+            filter[gen_child_entity_name_filter(depth=starting_point+len(parents))] = tree["name"]
+
+            filters.append(filter)
+
+        tree["filter"] = {"$or": filters}
+
+        if "children" in tree:
+            for k in tree["children"].keys():
+                prepare_tree_filter(tree["children"][k], parents + [tree["name"],])
 
     del tree["starting_points"]
-
-    if "children" in tree:
-        for k in tree["children"].keys():
-            prepare_tree_filter(tree["children"][k], parents + [tree["name"],])
+    pass
 
 def collect_tree_stat_rec(recv_fn, tree: dict):
     result = recv_fn((tree["name"], tree["filter"]))
@@ -362,3 +372,37 @@ def collect_tree_stat_rec(recv_fn, tree: dict):
 def collect_tree_stat(collection: Collection, start_date: datetime, granularity: Granularity, tree: dict):
     retrieve_journey_statistics_fn = partial(retrieve_journey_statistics, collection, start_date, granularity)
     collect_tree_stat_rec(retrieve_journey_statistics_fn, tree)
+
+def transform_and_limit_tree(tree, max_node_per_depth=10,  max_depth=-1):
+    """
+    Transform tree to d3.js tree format
+
+    :param tree: tree to transform, this is dict and we modify it inplace
+    :param max_node_per_depth: maximum number of node per depth, default is 10. Return top 10 node with higest sessions in stats field. Other nodes will be grouped into "others" node.
+    :param max_depth: maximum depth of tree, default is -2 (no limit)
+    """
+    if max_depth > 0 and tree["depth"] > max_depth:
+        tree["children"] = []
+
+    if "children" in tree:
+        for k in tree["children"].keys():
+            transform_and_limit_tree(tree["children"][k], max_node_per_depth, max_depth)
+
+    tree["uuid"] = uuid.uuid4().hex
+
+    if "children" in tree:
+        children = tree["children"]
+
+        if len(children) > max_node_per_depth:
+            sorted_children = sorted(children.values(), key=lambda x: x["stats"]["sessions"], reverse=True)
+
+            tree["children"] = sorted_children[:max_node_per_depth]
+
+            columm_stats = {"sessions": 0}
+            for c in sorted_children[max_node_per_depth:]:
+                columm_stats["sessions"] += c["stats"]["sessions"]
+
+            tree["children"].append({"name": "others", "stats": columm_stats})
+        else:
+            tree["children"] = list(children.values())
+
