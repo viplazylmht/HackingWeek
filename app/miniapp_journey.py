@@ -5,6 +5,7 @@ from datetime import timedelta, date, datetime
 import hashlib
 
 from fastapi import Response, status
+import operator
 
 # Path: app/miniapp_journey.py
 
@@ -47,7 +48,11 @@ def get_top_journeys_from_node(start_date: date, granularity: Optional[Granulari
 
         result.append(path_stats)
 
-    return result
+    # sort the result by sessions, descending
+    result.sort(key=lambda k: (k["stats"]["sessions"], k["stats"]["dist_users"]), reverse=True)
+
+    # result set limit to 1000
+    return result[:1000]
 
 def get_first_nodes(ds: date, granularity: Optional[Granularity], device_os: Optional[str] = None):
 
