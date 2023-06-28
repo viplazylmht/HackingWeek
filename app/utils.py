@@ -46,9 +46,9 @@ class FirstNode(BaseModel):
 class PathTree(BaseModel):
     name: str = Field(description="name of the node unless this is the root of the tree")
     depth: int = Field(description="depth of the node in the base tree")
+    uuid: str = Field(description="uuid of the node, randomly generated")
     stats: Stats = Field(description="statistics of the node in the tree")
     children: Optional[List["PathTree"]] = Field(description="children of the path. Each child is a keypair of the name of the child and the child itself")
-
 URI = 'mongodb://root:example@mongo:27017/'
 
 client = MongoClient(URI)
