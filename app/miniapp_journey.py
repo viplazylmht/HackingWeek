@@ -100,9 +100,11 @@ def get_first_nodes(ds: date, granularity: Optional[Granularity], device_os: Opt
             result.append(path['path']['entity_name'])
 
     # save first nodes to cache
+    result = [{"node_name": node_name} for node_name in result]
+
     first_node_cache_collection.insert_one({"date": date_time, "granularity": granularity.value, "device_os": device_os, "data": result})
 
-    return [{"node_name": node_name} for node_name in result]
+    return result
 
 def get_path_tree(start_date: date, granularity: Granularity,  node_name: Union[str, None] = None, depth: Union[int, None] = 0, device_os: Union[str, None] = None):
 

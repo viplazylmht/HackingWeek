@@ -4,4 +4,4 @@ LABEL maintainer="Duy Ha <viplazylmht@gmail.com>"
 
 RUN pip install --no-cache-dir pymongo
 
-# COPY ./app /app
+COPY ./app /app
